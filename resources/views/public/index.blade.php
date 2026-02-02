@@ -113,12 +113,14 @@
 
 
                 <div class="col-6 col-md-1 d-grid">
-                    <button class="btn btn-danger">Filter</button>
+                    <button class="btn btn-danger d-flex align-items-center justify-content-center">
+                        Filter
+                    </button>
                 </div>
 
                 <div class="col-6 col-md-1 d-grid">
                     <a href="{{ route('public.map') }}"
-                        class="btn btn-outline-secondary
+                        class="btn btn-outline-secondary d-flex align-items-center justify-content-center
                             {{ request()->hasAny(['type', 'from', 'to']) ? '' : 'disabled' }}">
                         Reset
                     </a>

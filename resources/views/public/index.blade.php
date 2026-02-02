@@ -60,6 +60,10 @@
             border-radius: 50%;
             margin-right: 8px;
         }
+
+        footer {
+            opacity: 0.85;
+        }
     </style>
 </head>
 
@@ -277,7 +281,18 @@
     </script>
 
 
-
+    <footer class="mt-5 py-3 text-center text-muted small" style="border-top:1px dashed #ddd;">
+        <div class="container">
+            <p class="mb-1">
+                Dibuat dari keresahan warga atas
+                <strong class="text-danger">#MakassarTidakAman</strong>
+            </p>
+            <p class="mb-0">
+                Platform ini bertujuan membantu pemetaan kejadian dan
+                mendukung upaya pencegahan agar Makassar lebih aman.
+            </p>
+        </div>
+    </footer>
 </body>
 
 </html>

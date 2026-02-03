@@ -208,7 +208,7 @@ class PublicReportController extends Controller
 
                 try {
                     $image = $manager
-                        ->read($file)
+                        ->read($file->getPathname())
                         ->orient()
                         ->toJpeg(quality: 85);
 
@@ -222,7 +222,7 @@ class PublicReportController extends Controller
                     ]);
                 } catch (\Throwable $e) {
                     return back()->withErrors([
-                        'media' => 'Format foto dari perangkat ini belum didukung server.'
+                        'media' => 'Format foto tidak didukung server.'
                     ]);
                 }
             }

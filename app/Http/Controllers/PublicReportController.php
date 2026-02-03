@@ -8,6 +8,8 @@ use App\Models\Report;
 use App\Models\ReportMedia;
 use App\Models\ReportType;
 use Illuminate\Support\Facades\Http;
+use Imagick;
+use Illuminate\Support\Str;
 
 class PublicReportController extends Controller
 {
@@ -195,19 +197,39 @@ class PublicReportController extends Controller
             'reporter_ip'    => $request->ip(),
         ]);
 
-        // 2️⃣ SIMPAN MEDIA (JIKA ADA)
         if ($request->hasFile('media')) {
             foreach ($request->file('media') as $file) {
-                $path = $file->store(
-                    'reports/' . $report->id,
-                    'public'
-                );
+
+                $extension = strtolower($file->getClientOriginalExtension());
+                $filename  = Str::uuid() . '.jpg'; // semua jadi JPG
+                $directory = 'reports/' . $report->id;
+                $fullPath  = storage_path('app/public/' . $directory);
+
+                if (!file_exists($fullPath)) {
+                    mkdir($fullPath, 0755, true);
+                }
+
+                // 🔥 CONVERT & NORMALIZE IMAGE
+                $image = new Imagick();
+                $image->readImage($file->getRealPath());
+
+                // HEIC / HEIF biasanya orientation kacau
+                $image->setImageOrientation(Imagick::ORIENTATION_TOPLEFT);
+                $image->setImageFormat('jpeg');
+                $image->setImageCompressionQuality(85);
+
+                // ⛔ optional tapi SANGAT DISARANKAN
+                $image->resizeImage(1600, 1600, Imagick::FILTER_LANCZOS, 1, true);
+
+                $image->writeImage($fullPath . '/' . $filename);
+                $image->clear();
+                $image->destroy();
 
                 ReportMedia::create([
                     'report_id' => $report->id,
-                    'file_path' => $path,
-                    'file_type' => $file->getClientMimeType(),
-                    'file_size' => $file->getSize(),
+                    'file_path' => $directory . '/' . $filename,
+                    'file_type' => 'image/jpeg',
+                    'file_size' => filesize($fullPath . '/' . $filename),
                 ]);
             }
         }

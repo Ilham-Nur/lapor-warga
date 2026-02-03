@@ -208,9 +208,9 @@ class PublicReportController extends Controller
 
                 try {
                     $image = $manager
-                        ->read($file->getPathname())
+                        ->read($file)
                         ->orient()
-                        ->toJpeg(quality: 85);
+                        ->toJpeg(85);
 
                     Storage::disk('public')->put($path, $image->toString());
 
@@ -221,8 +221,10 @@ class PublicReportController extends Controller
                         'file_size' => strlen($image->toString()),
                     ]);
                 } catch (\Throwable $e) {
+                    report($e);
+
                     return back()->withErrors([
-                        'media' => 'Format foto tidak didukung server.'
+                        'media' => 'Format foto tidak didukung oleh server.'
                     ]);
                 }
             }

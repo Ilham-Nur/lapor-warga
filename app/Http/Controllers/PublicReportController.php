@@ -8,6 +8,8 @@ use App\Models\Report;
 use App\Models\ReportMedia;
 use App\Models\ReportType;
 use Illuminate\Support\Facades\Http;
+use Intervention\Image\Facades\Image;
+use Illuminate\Support\Facades\Storage;
 
 class PublicReportController extends Controller
 {
@@ -198,16 +200,40 @@ class PublicReportController extends Controller
         // 2️⃣ SIMPAN MEDIA (JIKA ADA)
         if ($request->hasFile('media')) {
             foreach ($request->file('media') as $file) {
-                $path = $file->store(
-                    'reports/' . $report->id,
-                    'public'
-                );
+
+                $extension = strtolower($file->getClientOriginalExtension());
+
+                $filename = uniqid() . '.jpg';
+                $path = 'reports/' . $report->id . '/' . $filename;
+
+                // Convert HEIC / HEIF / WEBP → JPG
+                if (in_array($extension, ['heic', 'heif', 'webp'])) {
+
+                    $image = Image::make($file)
+                        ->orientate()
+                        ->encode('jpg', 85);
+
+                    Storage::disk('public')->put($path, (string) $image);
+
+                    $mime = 'image/jpeg';
+                    $size = strlen((string) $image);
+                } else {
+                    // JPG / PNG → simpan langsung (tetap distandarkan JPG)
+                    $image = Image::make($file)
+                        ->orientate()
+                        ->encode('jpg', 85);
+
+                    Storage::disk('public')->put($path, (string) $image);
+
+                    $mime = 'image/jpeg';
+                    $size = strlen((string) $image);
+                }
 
                 ReportMedia::create([
                     'report_id' => $report->id,
                     'file_path' => $path,
-                    'file_type' => $file->getClientMimeType(),
-                    'file_size' => $file->getSize(),
+                    'file_type' => $mime,
+                    'file_size' => $size,
                 ]);
             }
         }

@@ -133,8 +133,8 @@ class PublicReportController extends Controller
                 'address_text'   => 'nullable|string|max:255',
 
                 // media (opsional)
-                'media'          => 'nullable|array|max:3',
-                'media.*' => 'image|mimes:jpg,jpeg,png,heic,heif,webp|max:2048',
+                'media'   => 'nullable|array|max:3',
+                'media.*' => 'file|mimes:jpg,jpeg,png,heic,heif,webp|max:2048',
 
                 // 🔐 CAPTCHA
                 'g-recaptcha-response' => 'required',
@@ -159,7 +159,6 @@ class PublicReportController extends Controller
 
                 'media.array' => 'Media harus berupa daftar file.',
                 'media.max'   => 'Maksimal 3 file media yang dapat diunggah.',
-                'media.*.image' => 'File media harus berupa gambar.',
                 'media.*.mimes' => 'Format gambar harus jpg, jpeg, png, heic, atau webp.',
                 'media.*.max'   => 'Ukuran gambar maksimal 2MB.',
 

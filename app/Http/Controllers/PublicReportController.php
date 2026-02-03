@@ -8,9 +8,6 @@ use App\Models\Report;
 use App\Models\ReportMedia;
 use App\Models\ReportType;
 use Illuminate\Support\Facades\Http;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Imagick\Driver;
-use Illuminate\Support\Facades\Storage;
 
 class PublicReportController extends Controller
 {
@@ -198,35 +195,20 @@ class PublicReportController extends Controller
             'reporter_ip'    => $request->ip(),
         ]);
 
-        $manager = new ImageManager(new Driver());
-
+        // 2️⃣ SIMPAN MEDIA (JIKA ADA)
         if ($request->hasFile('media')) {
             foreach ($request->file('media') as $file) {
+                $path = $file->store(
+                    'reports/' . $report->id,
+                    'public'
+                );
 
-                $filename = uniqid() . '.jpg';
-                $path = 'reports/' . $report->id . '/' . $filename;
-
-                try {
-                    $image = $manager
-                        ->read($file)
-                        ->orient()
-                        ->toJpeg(85);
-
-                    Storage::disk('public')->put($path, $image->toString());
-
-                    ReportMedia::create([
-                        'report_id' => $report->id,
-                        'file_path' => $path,
-                        'file_type' => 'image/jpeg',
-                        'file_size' => strlen($image->toString()),
-                    ]);
-                } catch (\Throwable $e) {
-                    report($e);
-
-                    return back()->withErrors([
-                        'media' => 'Format foto tidak didukung oleh server.'
-                    ]);
-                }
+                ReportMedia::create([
+                    'report_id' => $report->id,
+                    'file_path' => $path,
+                    'file_type' => $file->getClientMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
             }
         }
 

@@ -8,7 +8,8 @@ use App\Models\Report;
 use App\Models\ReportMedia;
 use App\Models\ReportType;
 use Illuminate\Support\Facades\Http;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Imagick\Driver;
 use Illuminate\Support\Facades\Storage;
 
 class PublicReportController extends Controller
@@ -197,44 +198,33 @@ class PublicReportController extends Controller
             'reporter_ip'    => $request->ip(),
         ]);
 
-        // 2️⃣ SIMPAN MEDIA (JIKA ADA)
+        $manager = new ImageManager(new Driver());
+
         if ($request->hasFile('media')) {
             foreach ($request->file('media') as $file) {
-
-                $extension = strtolower($file->getClientOriginalExtension());
 
                 $filename = uniqid() . '.jpg';
                 $path = 'reports/' . $report->id . '/' . $filename;
 
-                // Convert HEIC / HEIF / WEBP → JPG
-                if (in_array($extension, ['heic', 'heif', 'webp'])) {
+                try {
+                    $image = $manager
+                        ->read($file)
+                        ->orient()
+                        ->toJpeg(quality: 85);
 
-                    $image = Image::make($file)
-                        ->orientate()
-                        ->encode('jpg', 85);
+                    Storage::disk('public')->put($path, $image->toString());
 
-                    Storage::disk('public')->put($path, (string) $image);
-
-                    $mime = 'image/jpeg';
-                    $size = strlen((string) $image);
-                } else {
-                    // JPG / PNG → simpan langsung (tetap distandarkan JPG)
-                    $image = Image::make($file)
-                        ->orientate()
-                        ->encode('jpg', 85);
-
-                    Storage::disk('public')->put($path, (string) $image);
-
-                    $mime = 'image/jpeg';
-                    $size = strlen((string) $image);
+                    ReportMedia::create([
+                        'report_id' => $report->id,
+                        'file_path' => $path,
+                        'file_type' => 'image/jpeg',
+                        'file_size' => strlen($image->toString()),
+                    ]);
+                } catch (\Throwable $e) {
+                    return back()->withErrors([
+                        'media' => 'Format foto dari perangkat ini belum didukung server.'
+                    ]);
                 }
-
-                ReportMedia::create([
-                    'report_id' => $report->id,
-                    'file_path' => $path,
-                    'file_type' => $mime,
-                    'file_size' => $size,
-                ]);
             }
         }
 

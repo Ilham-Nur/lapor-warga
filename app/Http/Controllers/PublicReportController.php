@@ -238,4 +238,31 @@ class PublicReportController extends Controller
             ->route('public.report.create')
             ->with('success', 'Terima kasih. Laporan Anda telah kami terima dan akan diverifikasi.');
     }
+
+    public function geocode(Request $request)
+    {
+        $q = trim($request->query('q', ''));
+
+        if (mb_strlen($q) < 3) {
+            return response()->json(['ok' => true, 'data' => []]);
+        }
+
+        $res = Http::withHeaders([
+            'User-Agent' => 'LaporWarga/1.0 (contact: dev@localhost)',
+            'Accept' => 'application/json',
+        ])
+            ->timeout(10)
+            ->get('https://nominatim.openstreetmap.org/search', [
+                'format' => 'jsonv2',
+                'limit'  => 5,
+                'q'      => $q,
+                // 'countrycodes' => 'id', // opsional
+            ]);
+
+        if (!$res->successful()) {
+            return response()->json(['ok' => false, 'data' => []]);
+        }
+
+        return response()->json(['ok' => true, 'data' => $res->json()]);
+    }
 }

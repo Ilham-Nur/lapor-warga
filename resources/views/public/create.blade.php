@@ -100,11 +100,25 @@
                     </div>
 
                     {{-- MAP --}}
-                    <div class="mb-2">
+                    <div class="mb-2 position-relative">
                         <label class="form-label">Lokasi Kejadian</label>
+
+                        {{-- ✅ SEARCH BOX --}}
+                        <div class="input-group mb-2">
+                            <input type="text" id="searchAddress" class="form-control"
+                                placeholder="Cari nama jalan / lokasi... contoh: Jl Pettarani Makassar">
+                            <button type="button" id="btnSearch" class="btn btn-outline-danger">Cari</button>
+                        </div>
+
+                        {{-- ✅ DROPDOWN HASIL --}}
+                        <div id="searchResult" class="list-group shadow"
+                            style="display:none; position:absolute; z-index: 9999; width:100%; max-height:220px; overflow:auto;">
+                        </div>
+
                         <div id="map"></div>
+
                         <div class="hint mt-1">
-                            Ketuk / klik pada peta untuk menandai lokasi kejadian.
+                            Ketik nama jalan lalu pilih hasilnya, atau ketuk/klik peta untuk menandai lokasi manual.
                         </div>
                     </div>
 
@@ -200,17 +214,114 @@
 
         let marker;
 
+        function setPoint(lat, lng, zoom = 16) {
+            $('#latitude').val(Number(lat).toFixed(8));
+            $('#longitude').val(Number(lng).toFixed(8));
+
+            const latlng = L.latLng(lat, lng);
+
+            if (marker) marker.setLatLng(latlng);
+            else marker = L.marker(latlng).addTo(map);
+
+            map.setView(latlng, zoom);
+        }
+
+        // Klik map manual
         map.on('click', function(e) {
-            const lat = e.latlng.lat.toFixed(8);
-            const lng = e.latlng.lng.toFixed(8);
+            setPoint(e.latlng.lat, e.latlng.lng);
+        });
 
-            $('#latitude').val(lat);
-            $('#longitude').val(lng);
+        // =========================
+        // ✅ SEARCH (via Laravel proxy route)
+        // =========================
 
-            if (marker) {
-                marker.setLatLng(e.latlng);
-            } else {
-                marker = L.marker(e.latlng).addTo(map);
+        let searchTimer = null;
+
+        async function fetchGeocode(query) {
+            const url = `{{ route('public.geocode') }}?q=${encodeURIComponent(query)}`;
+            const res = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!res.ok) return [];
+            const json = await res.json();
+            if (!json || !json.ok) return [];
+
+            return json.data || [];
+        }
+
+        function renderResults(items) {
+            const box = $('#searchResult');
+            box.empty();
+
+            if (!items.length) {
+                box.hide();
+                return;
+            }
+
+            items.forEach(item => {
+                const btn = $(`
+                <button type="button" class="list-group-item list-group-item-action">
+                    ${item.display_name}
+                </button>
+            `);
+
+                btn.on('click', function() {
+                    setPoint(parseFloat(item.lat), parseFloat(item.lon), 16);
+                    $('#address_text').val(item.display_name); // isi alamat otomatis
+                    box.hide().empty();
+                });
+
+                box.append(btn);
+            });
+
+            box.show();
+        }
+
+        async function doSearch() {
+            const q = $('#searchAddress').val().trim();
+
+            if (q.length < 3) {
+                renderResults([]);
+                return;
+            }
+
+            $('#btnSearch').prop('disabled', true).text('Mencari...');
+
+            try {
+                const data = await fetchGeocode(q);
+                renderResults(data);
+            } catch (e) {
+                console.error(e);
+                renderResults([]);
+            } finally {
+                $('#btnSearch').prop('disabled', false).text('Cari');
+            }
+        }
+
+        // Ketik -> auto search (debounce)
+        $('#searchAddress').on('input', function() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(doSearch, 450);
+        });
+
+        // Klik tombol Cari
+        $('#btnSearch').on('click', doSearch);
+
+        // Enter di input search
+        $('#searchAddress').on('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                doSearch();
+            }
+        });
+
+        // Klik di luar -> tutup dropdown
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#searchAddress, #btnSearch, #searchResult').length) {
+                $('#searchResult').hide().empty();
             }
         });
 
@@ -224,20 +335,17 @@
             }
         });
 
-
+        // Disable submit biar gak dobel klik
         $('form').on('submit', function() {
             const btn = $('#submitBtn');
-
-            // disable tombol
             btn.prop('disabled', true);
-
-            // ganti tampilan
             btn.html(`
             <span class="spinner-border spinner-border-sm me-2"></span>
             Sedang diproses...
         `);
         });
     </script>
+
 
 </body>
 

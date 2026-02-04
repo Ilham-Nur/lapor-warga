@@ -10,13 +10,15 @@ use Illuminate\Support\Facades\Route;
 //     return view('welcome');
 // });
 
-
 Route::controller(PublicReportController::class)->group(function () {
     Route::get('/', 'index')->name('public.map');
     Route::get('/lapor', 'create')->name('public.report.create');
     Route::post('/lapor', 'store')
         ->name('public.report.store')
         ->middleware('throttle:10,1');
+
+    // ✅ route proxy geocode (biar gak kena CORS)
+    Route::get('/lapor/geocode', 'geocode')->name('public.geocode')->middleware('throttle:60,1');
 });
 
 Route::get('/report/{report}', [PublicReportController::class, 'show'])
